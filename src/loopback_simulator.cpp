@@ -11,7 +11,7 @@ LoopbackSimulator::LoopbackSimulator(const geometry_msgs::msg::PoseWithCovarianc
         "cmd_vel", 10, std::bind(&LoopbackSimulator::twistCallback, this, std::placeholders::_1));
 
     // Initialize TF broadcaster
-    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+    tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
 
     // Initialize init pose publisher
     init_pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("initialpose", 10);
@@ -34,19 +34,22 @@ void LoopbackSimulator::publishInitial_TF_pose() {
 
     
         geometry_msgs::msg::TransformStamped transformStamped;
-        transformStamped.header.stamp = now();
+        transformStamped.header.stamp = this->now();
         transformStamped.header.frame_id = "map";
         transformStamped.child_frame_id = "odom";
         transformStamped.transform.translation.x = odom_pose_.pose.pose.position.x;
         transformStamped.transform.translation.y = odom_pose_.pose.pose.position.y;
         transformStamped.transform.translation.z = odom_pose_.pose.pose.position.z;
-        transformStamped.transform.rotation = odom_pose_.pose.pose.orientation;
-
-        
+        transformStamped.transform.rotation = odom_pose_.pose.pose.orientation;        
 
         std::cout << "published init pose and tf\n";
         init_pose_publisher_->publish(odom_pose_);
-        //tf_broadcaster_->sendTransform(transformStamped);
+
+
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+
+
+        tf_broadcaster_->sendTransform(transformStamped);
 
     
 }
