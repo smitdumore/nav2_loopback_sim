@@ -12,14 +12,15 @@
 
 class LoopbackSimulator : public rclcpp::Node {
 public:
-    LoopbackSimulator(const geometry_msgs::msg::PoseWithCovarianceStamped &odom_pose_msg);
+    LoopbackSimulator();
 
 private:
     void twistCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
-    void publishInitial_TF_pose();
+    void initposeCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
-    const geometry_msgs::msg::PoseWithCovarianceStamped odom_pose_; // init odom pose wrt map frame
+    geometry_msgs::msg::PoseWithCovarianceStamped init_pose_; // init odom pose wrt map frame
+
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr init_pose_subscriber_;
     std::unique_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr init_pose_publisher_;
 };
