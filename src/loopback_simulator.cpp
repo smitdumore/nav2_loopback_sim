@@ -15,6 +15,13 @@ LoopbackSimulator::LoopbackSimulator() :
             "initialpose", 10,
             std::bind(&LoopbackSimulator::initposeCallback, this, std::placeholders::_1));
 
+    double timer_frequency{0.0};
+    declare_parameter("timer_frequency", 10.0);  // Default frequency is 10.0 Hz
+    get_parameter("timer_frequency", timer_frequency);
+
+    // Create a timer with a callback that runs every 1 second
+    timer_ = create_wall_timer(std::chrono::duration<double>(1.0 / timer_frequency), std::bind(&LoopbackSimulator::timerCallback, this));
+
     // Initialize TF broadcaster
     tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
 }
@@ -31,4 +38,9 @@ void LoopbackSimulator::initposeCallback(const geometry_msgs::msg::PoseWithCovar
     RCLCPP_INFO(this->get_logger(), "Received initial pose");
     init_pose_ = *msg;
 
+}
+
+void LoopbackSimulator::timerCallback() {
+    // Your callback logic for the timer
+    RCLCPP_INFO(this->get_logger(), "Timer callback triggered!");
 }
