@@ -37,10 +37,24 @@ void LoopbackSimulator::initposeCallback(const geometry_msgs::msg::PoseWithCovar
 
     RCLCPP_INFO(this->get_logger(), "Received initial pose");
     init_pose_ = *msg;
-
+    init_pose_set_ = true;
 }
 
 void LoopbackSimulator::timerCallback() {
-    // Your callback logic for the timer
-    RCLCPP_INFO(this->get_logger(), "Timer callback triggered!");
+    
+    if(init_pose_set_ == false) return;
+    
+    RCLCPP_INFO(this->get_logger(), "Publishing map->odom tf");
+
+    geometry_msgs::msg::TransformStamped transformStamped;
+    
+    transformStamped.header.stamp = this->now();
+    transformStamped.header.frame_id = "map";
+    transformStamped.child_frame_id = "odom";
+    transformStamped.transform.translation.x = init_pose_.pose.pose.position.x;
+    transformStamped.transform.translation.y = init_pose_.pose.pose.position.y;
+    transformStamped.transform.translation.z = init_pose_.pose.pose.position.z;
+    transformStamped.transform.rotation = init_pose_.pose.pose.orientation;        
+
+    tf_broadcaster_->sendTransform(transformStamped);
 }

@@ -8,6 +8,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "tf2_ros/static_transform_broadcaster.h"
+#include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 
 class LoopbackSimulator : public rclcpp::Node {
@@ -20,6 +21,7 @@ private:
     void timerCallback();
 
     geometry_msgs::msg::PoseWithCovarianceStamped init_pose_; // init odom pose wrt map frame
+    bool init_pose_set_ = false;
 
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
     rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr init_pose_subscriber_;

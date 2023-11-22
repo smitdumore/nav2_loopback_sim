@@ -8,6 +8,6 @@ def generate_launch_description():
             executable='sim_node',
             name='loopback_simulator_node',
             output='screen',
-            parameters=[{'timer_frequency': 10.0}]
+            parameters=[{'timer_frequency': 1.0}]
         ),
     ])
