@@ -44,17 +44,34 @@ void LoopbackSimulator::timerCallback() {
     
     if(init_pose_set_ == false) return;
     
-    RCLCPP_INFO(this->get_logger(), "Publishing map->odom tf");
+    RCLCPP_INFO(this->get_logger(), "Publishing map->odom and odom->base tf");
 
-    geometry_msgs::msg::TransformStamped transformStamped;
-    
-    transformStamped.header.stamp = this->now();
-    transformStamped.header.frame_id = "map";
-    transformStamped.child_frame_id = "odom";
-    transformStamped.transform.translation.x = init_pose_.pose.pose.position.x;
-    transformStamped.transform.translation.y = init_pose_.pose.pose.position.y;
-    transformStamped.transform.translation.z = init_pose_.pose.pose.position.z;
-    transformStamped.transform.rotation = init_pose_.pose.pose.orientation;        
+    // Publish map to odom transform
+    geometry_msgs::msg::TransformStamped map_to_odom_transform;
+    map_to_odom_transform.header.stamp = this->now();
+    map_to_odom_transform.header.frame_id = "map";
+    map_to_odom_transform.child_frame_id = "odom";
+    map_to_odom_transform.transform.translation.x = init_pose_.pose.pose.position.x;
+    map_to_odom_transform.transform.translation.y = init_pose_.pose.pose.position.y;
+    map_to_odom_transform.transform.translation.z = init_pose_.pose.pose.position.z;
+    map_to_odom_transform.transform.rotation = init_pose_.pose.pose.orientation;
 
-    tf_broadcaster_->sendTransform(transformStamped);
+    tf_broadcaster_->sendTransform(map_to_odom_transform);
+
+    // Publish odom to base_footprint transform
+    geometry_msgs::msg::TransformStamped odom_to_base_transform;
+    odom_to_base_transform.header.stamp = this->now();
+    odom_to_base_transform.header.frame_id = "odom";
+    odom_to_base_transform.child_frame_id = "base_footprint";
+    odom_to_base_transform.transform.translation.x = 0.0;
+    odom_to_base_transform.transform.translation.y = 0.0;
+    odom_to_base_transform.transform.translation.z = 0.0;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, 0);
+    odom_to_base_transform.transform.rotation.x = q.x();
+    odom_to_base_transform.transform.rotation.y = q.y();
+    odom_to_base_transform.transform.rotation.z = q.z();
+    odom_to_base_transform.transform.rotation.w = q.w();
+
+    tf_broadcaster_->sendTransform(odom_to_base_transform);
 }
