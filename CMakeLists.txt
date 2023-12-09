@@ -36,7 +36,7 @@ ament_target_dependencies(${library_name}
 )
 
 add_executable(${executable_name}
-  src/sim_node.cpp
+  src/main.cpp
 )
 
 target_link_libraries(${executable_name} ${library_name}) 
@@ -59,6 +59,11 @@ install(TARGETS ${executable_name}
 
 install(DIRECTORY include/
   DESTINATION include/
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

@@ -1,25 +1,37 @@
-// robot_simulator.cpp
-#include "nav2_loopback_sim/loopback_simulator.h"
+// Copyright (c) 2018 Intel Corporation
+// Copyright (c) 2019 Samsung Research America
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "nav2_loopback_sim/loopback_simulator.hpp"
 
 LoopbackSimulator::LoopbackSimulator() : 
     Node("loopback_simulator_node"){
 
-    std::cout << "Loopback simulator instance created\n";
-
-    // Initialize ROS subscribers, publishers, and other setup
+    // Initialise subscribers
     vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel", 10, std::bind(&LoopbackSimulator::twistCallback, this, std::placeholders::_1));
 
-    // init pose subscriber
     init_pose_subscriber_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
             "initialpose", 10,
             std::bind(&LoopbackSimulator::initposeCallback, this, std::placeholders::_1));
 
+    // Frequency parameter for timer function
     double timer_frequency{0.0};
-    declare_parameter("timer_frequency", 10.0);  // Default frequency is 10.0 Hz
+    declare_parameter("timer_frequency", 10.0);
     get_parameter("timer_frequency", timer_frequency);
 
-    // Create a timer with a callback that runs every 1 second
+    // Create a timer
     timer_ = create_wall_timer(std::chrono::duration<double>(1.0 / timer_frequency), std::bind(&LoopbackSimulator::timerCallback, this));
 
     // Initialize TF broadcaster
@@ -33,37 +45,28 @@ void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr
 
     if(init_pose_set_ == false) return;
     
-    double dt = 0.1; // Adjust the time step as needed
+    double dt = 0.1; // Adjust the time step
 
-    // Transform base_updated_pose_ from "map" to "odom" frame
-    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_;
+    if(once_ == true) { 
+        try
+        {
+            geometry_msgs::msg::TransformStamped a_transform = tf_buffer_->lookupTransform("odom",
+                                base_updated_pose_.header.frame_id,
+                                tf2::TimePointZero);
 
-    geometry_msgs::msg::Pose A;
-    geometry_msgs::msg::Pose B;
-    try
-    {
-        //tf2::TimePoint transform_time = tf2::TimePointZero;
+            tf2::doTransform(base_updated_pose_, odom_updated_pose_, a_transform);
+        }
+        catch (const tf2::TransformException& ex)
+        {
+            RCLCPP_ERROR(rclcpp::get_logger("logger_name"), "Could not transform point.");
+        }
 
-        geometry_msgs::msg::TransformStamped a_transform = tf_buffer_->lookupTransform("odom",
-                              base_updated_pose_.header.frame_id,
-                              tf2::TimePointZero);
-
-        tf2::doTransform(A, B, a_transform);
-        //tf2::doTransform<geometry_msgs::msg::Pose>(A, B, a_transform);
-        //f_buffer_->transform(A, B, "odom");
-    }
-    catch (const tf2::TransformException& ex)
-    {
-        RCLCPP_ERROR(rclcpp::get_logger("logger_name"), "Could not transform point.");
+        once_ = false;
     }
 
-    odom_updated_pose_.header.stamp = this->now();  // Update the timestamp to reflect the current time
+    odom_updated_pose_.header.frame_id = "odom";
+    odom_updated_pose_.header.stamp = this->now();
 
-    odom_updated_pose_.pose.pose.position.x += msg->linear.x * dt;
-    odom_updated_pose_.pose.pose.position.y += msg->linear.y * dt;
-    odom_updated_pose_.pose.pose.position.z += msg->linear.z * dt;
-
-    // Update orientation based on angular velocity (for simplicity, consider 2D)
     tf2::Quaternion base_link_orientation(
         odom_updated_pose_.pose.pose.orientation.x,
         odom_updated_pose_.pose.pose.orientation.y,
@@ -80,6 +83,15 @@ void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr
     odom_updated_pose_.pose.pose.orientation.y = base_link_orientation.y();
     odom_updated_pose_.pose.pose.orientation.z = base_link_orientation.z();
     odom_updated_pose_.pose.pose.orientation.w = base_link_orientation.w();
+
+    //Use rotation matrix to update linear velocities based on the new orientation
+    tf2::Matrix3x3 rotation_matrix(base_link_orientation);
+    tf2::Vector3 linear_velocity(msg->linear.x, msg->linear.y, msg->linear.z);
+    tf2::Vector3 rotated_linear_velocity = rotation_matrix * linear_velocity;
+
+    odom_updated_pose_.pose.pose.position.x += rotated_linear_velocity.x() * dt;
+    odom_updated_pose_.pose.pose.position.y += rotated_linear_velocity.y() * dt;
+    odom_updated_pose_.pose.pose.position.z += rotated_linear_velocity.z() * dt;
 
     // Broadcast "odom" to "base_link" transform using the local variable
     geometry_msgs::msg::TransformStamped odom_to_base_transform;
