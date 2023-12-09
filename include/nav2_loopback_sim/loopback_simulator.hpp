@@ -26,6 +26,7 @@
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/static_transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include <tf2/convert.h>
@@ -34,7 +35,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 
-
+namespace nav2_loopback_sim
+{
 /**
  * @class nav2_planner::LoopbackSimulator
  * @brief A class that is a lightweight simulation alternative designed to facilitate 
@@ -69,11 +71,10 @@ private:
 
     //Poses
     geometry_msgs::msg::PoseWithCovarianceStamped init_pose_; // init odom pose wrt map frame
-    geometry_msgs::msg::PoseWithCovarianceStamped base_updated_pose_; // init pose of base wrt odom that keeps getting updated
-    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_; // Transform base_updated_pose_ from "map" to "odom" frame
+    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_; // Transformed init_pose_ from "map" to "odom" frame
     bool init_pose_set_ = false;
     bool init_odom_base_published_ = false;
-    bool once_ = true;
+    bool transform_initpose_once_ = true;
 
     //Subscribers
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
@@ -82,8 +83,11 @@ private:
     //tf 
     std::unique_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     rclcpp::TimerBase::SharedPtr timer_;
 };
+
+} // namespace nav2_loopback_sim
 
 #endif  // NAV2_LOOPBACK_SIM_LOOPBACK_SIMULATOR_HPP

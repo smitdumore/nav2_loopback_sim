@@ -15,8 +15,10 @@
 
 #include "nav2_loopback_sim/loopback_simulator.hpp"
 
-LoopbackSimulator::LoopbackSimulator() : 
-    Node("loopback_simulator_node"){
+namespace nav2_loopback_sim
+{
+
+LoopbackSimulator::LoopbackSimulator() : Node("loopback_simulator_node"){
 
     // Initialise subscribers
     vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>(
@@ -34,11 +36,13 @@ LoopbackSimulator::LoopbackSimulator() :
     // Create a timer
     timer_ = create_wall_timer(std::chrono::duration<double>(1.0 / timer_frequency), std::bind(&LoopbackSimulator::timerCallback, this));
 
-    // Initialize TF broadcaster
+    // Initialize tf broadcaster
     tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
 
-    //tf buffer
-    tf_buffer_.reset(new tf2_ros::Buffer(this->get_clock()));
+    //tf 
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
 }
 
 void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
@@ -47,23 +51,25 @@ void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr
     
     double dt = 0.1; // Adjust the time step
 
-    if(once_ == true) { 
+    // Transform initpose from map to odom frame
+    if(transform_initpose_once_ == true) { 
         try
         {
-            geometry_msgs::msg::TransformStamped a_transform = tf_buffer_->lookupTransform("odom",
-                                base_updated_pose_.header.frame_id,
+            geometry_msgs::msg::TransformStamped transform = tf_buffer_->lookupTransform("odom",
+                                init_pose_.header.frame_id,
                                 tf2::TimePointZero);
 
-            tf2::doTransform(base_updated_pose_, odom_updated_pose_, a_transform);
+            tf2::doTransform(init_pose_, odom_updated_pose_, transform);
         }
         catch (const tf2::TransformException& ex)
         {
-            RCLCPP_ERROR(rclcpp::get_logger("logger_name"), "Could not transform point.");
+            RCLCPP_ERROR(rclcpp::get_logger("logger_name"), "Could not transform init pose from Map to Odom.");
         }
 
-        once_ = false;
+        transform_initpose_once_ = false;
     }
 
+    // Update the transformed pose in the local variable
     odom_updated_pose_.header.frame_id = "odom";
     odom_updated_pose_.header.stamp = this->now();
 
@@ -78,13 +84,12 @@ void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr
     angular_change.setRPY(msg->angular.x * dt, msg->angular.y * dt, msg->angular.z * dt);
     base_link_orientation *= angular_change;
 
-    // Update the transformed pose in the local variable
     odom_updated_pose_.pose.pose.orientation.x = base_link_orientation.x();
     odom_updated_pose_.pose.pose.orientation.y = base_link_orientation.y();
     odom_updated_pose_.pose.pose.orientation.z = base_link_orientation.z();
     odom_updated_pose_.pose.pose.orientation.w = base_link_orientation.w();
 
-    //Use rotation matrix to update linear velocities based on the new orientation
+    // Forward integrate robot position and orientation using velocity commands 
     tf2::Matrix3x3 rotation_matrix(base_link_orientation);
     tf2::Vector3 linear_velocity(msg->linear.x, msg->linear.y, msg->linear.z);
     tf2::Vector3 rotated_linear_velocity = rotation_matrix * linear_velocity;
@@ -95,8 +100,8 @@ void LoopbackSimulator::twistCallback(const geometry_msgs::msg::Twist::SharedPtr
 
     // Broadcast "odom" to "base_link" transform using the local variable
     geometry_msgs::msg::TransformStamped odom_to_base_transform;
-    odom_to_base_transform.header.stamp = odom_updated_pose_.header.stamp;  // Use the timestamp from odom_updated_pose_
-    odom_to_base_transform.header.frame_id = "odom";  // "odom" is the frame_id for the "odom" frame
+    odom_to_base_transform.header.stamp = odom_updated_pose_.header.stamp; 
+    odom_to_base_transform.header.frame_id = "odom";
     odom_to_base_transform.child_frame_id = "base_link";
     odom_to_base_transform.transform.translation.x = odom_updated_pose_.pose.pose.position.x;
     odom_to_base_transform.transform.translation.y = odom_updated_pose_.pose.pose.position.y;
@@ -110,11 +115,11 @@ void LoopbackSimulator::initposeCallback(const geometry_msgs::msg::PoseWithCovar
 
     RCLCPP_INFO(this->get_logger(), "Received initial pose wrt map");
     init_pose_ = *msg;
-    base_updated_pose_ = init_pose_;
+    //base_updated_pose_ = init_pose_;
     init_pose_set_ = true;
 
     if(init_odom_base_published_ == false){
-        // Publish odom to base_footprint transform
+        // Publish Identity transform between odom to base_footprint
         geometry_msgs::msg::TransformStamped odom_to_base_transform;
         odom_to_base_transform.header.stamp = this->now();
         odom_to_base_transform.header.frame_id = "odom";
@@ -138,7 +143,7 @@ void LoopbackSimulator::timerCallback() {
     
     if(init_pose_set_ == false) return;
     
-    RCLCPP_INFO(this->get_logger(), "Publishing map->odom tf");
+    //RCLCPP_INFO(this->get_logger(), "Publishing map->odom tf");
 
     // Publish map to odom transform
     geometry_msgs::msg::TransformStamped map_to_odom_transform;
@@ -152,3 +157,5 @@ void LoopbackSimulator::timerCallback() {
 
     tf_broadcaster_->sendTransform(map_to_odom_transform);
 }
+
+} //namespace nav2_loopback_sim

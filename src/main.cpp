@@ -18,7 +18,7 @@
 int main(int argc, char **argv) 
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<LoopbackSimulator>();
+    auto node = std::make_shared<nav2_loopback_sim::LoopbackSimulator>();
     rclcpp::spin(node);
     rclcpp::shutdown();
 
