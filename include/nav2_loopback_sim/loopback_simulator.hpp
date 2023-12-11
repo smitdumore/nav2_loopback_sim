@@ -38,55 +38,54 @@ namespace nav2_loopback_sim
 {
 /**
  * @class nav2_planner::LoopbackSimulator
- * @brief A class that is a lightweight simulation alternative designed to facilitate 
+ * @brief A class that is a lightweight simulation alternative designed to facilitate
  * testing of higher-level behavioral attributes
- */
+*/
 class LoopbackSimulator : public rclcpp::Node
 {
 public:
   /**
-   * @brief A constructor for nav2_planner::LoopbackSimulator
-   */
-    LoopbackSimulator();
+  * @brief A constructor for nav2_planner::LoopbackSimulator
+  */
+  LoopbackSimulator();
 
 private:
-    /**
-     * @brief Called when velocity commands are received 
-     * @param msg twist velocity message
-     */
-    void twistCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
+  /**
+  * @brief Called when velocity commands are received
+  * @param msg twist velocity message
+  */
+  void twistCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
 
-    /**
-     * @brief Called when initial pose is set by the user
-     * @param msg initial pose
-     */
-    void initposeCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+  /**
+  * @brief Called when initial pose is set by the user
+  * @param msg initial pose
+  */
+  void initposeCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
 
-    /**
-     * @brief Timer function to continously broadcast map->odom tf
-     * 
-     */
-    void timerCallback();
+  /**
+  * @brief Timer function to continously broadcast map->odom tf
+  */
+  void timerCallback();
 
-    // Poses
-    geometry_msgs::msg::PoseWithCovarianceStamped init_pose_;  // init odom pose wrt map frame
-    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_;
-    // Transformed init_pose_ from "map" to "odom" frame
-    bool init_pose_set_ = false;
-    bool init_odom_base_published_ = false;
-    bool transform_initpose_once_ = true;
+  // Poses
+  geometry_msgs::msg::PoseWithCovarianceStamped init_pose_;  // init odom pose wrt map frame
+  geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_;
+  // Transformed init_pose_ from "map" to "odom" frame
+  bool init_pose_set_ = false;
+  bool init_odom_base_published_ = false;
+  bool transform_initpose_once_ = true;
 
-    // Subscribers
-    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+  // Subscribers
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     init_pose_subscriber_;
 
-    // tf
-    std::unique_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  // tf
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-    rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 
 }  // namespace nav2_loopback_sim
