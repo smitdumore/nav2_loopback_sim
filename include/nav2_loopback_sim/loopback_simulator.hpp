@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_LOOPBACK_SIM_LOOPBACK_SIMULATOR_HPP
-#define NAV2_LOOPBACK_SIM_LOOPBACK_SIMULATOR_HPP
+#ifndef NAV2_LOOPBACK_SIM__LOOPBACK_SIMULATOR_HPP_
+#define NAV2_LOOPBACK_SIM__LOOPBACK_SIMULATOR_HPP_
 
 #pragma once
 #include <iostream>
@@ -29,11 +29,10 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2/LinearMath/Quaternion.h"
-#include <tf2/convert.h>
+#include "tf2/convert.h"
 #include "tf2_ros/buffer.h"
-#include <tf2/exceptions.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/transform_datatypes.h>
+#include "tf2/exceptions.h"
+#include "tf2/transform_datatypes.h"
 
 namespace nav2_loopback_sim
 {
@@ -42,7 +41,7 @@ namespace nav2_loopback_sim
  * @brief A class that is a lightweight simulation alternative designed to facilitate 
  * testing of higher-level behavioral attributes
  */
-class LoopbackSimulator : public rclcpp::Node 
+class LoopbackSimulator : public rclcpp::Node
 {
 public:
   /**
@@ -69,18 +68,20 @@ private:
      */
     void timerCallback();
 
-    //Poses
-    geometry_msgs::msg::PoseWithCovarianceStamped init_pose_; // init odom pose wrt map frame
-    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_; // Transformed init_pose_ from "map" to "odom" frame
+    // Poses
+    geometry_msgs::msg::PoseWithCovarianceStamped init_pose_;  // init odom pose wrt map frame
+    geometry_msgs::msg::PoseWithCovarianceStamped odom_updated_pose_;
+    // Transformed init_pose_ from "map" to "odom" frame
     bool init_pose_set_ = false;
     bool init_odom_base_published_ = false;
     bool transform_initpose_once_ = true;
 
-    //Subscribers
+    // Subscribers
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr vel_subscriber_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr init_pose_subscriber_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+    init_pose_subscriber_;
 
-    //tf 
+    // tf
     std::unique_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -88,6 +89,6 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
 };
 
-} // namespace nav2_loopback_sim
+}  // namespace nav2_loopback_sim
 
-#endif  // NAV2_LOOPBACK_SIM_LOOPBACK_SIMULATOR_HPP
+#endif  // NAV2_LOOPBACK_SIM__LOOPBACK_SIMULATOR_HPP_
